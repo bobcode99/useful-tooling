@@ -2,7 +2,11 @@ import { createFileRoute } from '@tanstack/react-router'
 import { diff } from 'json-diff-ts'
 import type { IChange } from 'json-diff-ts'
 import { useRef, useState } from 'react'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Upload } from 'lucide-react'
+import { useTheme } from '#/context/theme'
 
 export const Route = createFileRoute('/json-diff')({ component: JsonDiff })
 
@@ -22,76 +26,18 @@ function sortDeep(val: unknown): unknown {
   return val
 }
 
-type Token = {
-  type: 'key' | 'string' | 'number' | 'boolean' | 'null' | 'other'
-  value: string
-}
-
-function tokenize(jsonStr: string): Token[] {
-  const tokens: Token[] = []
-  let i = 0
-  while (i < jsonStr.length) {
-    if (jsonStr[i] === '"') {
-      let j = i + 1
-      while (j < jsonStr.length) {
-        if (jsonStr[j] === '\\') j += 2
-        else if (jsonStr[j] === '"') {
-          j++
-          break
-        } else j++
-      }
-      const value = jsonStr.slice(i, j)
-      const after = jsonStr.slice(j).match(/^\s*:/)
-      tokens.push({ type: after ? 'key' : 'string', value })
-      i = j
-    } else if (jsonStr[i] === '-' || (jsonStr[i] >= '0' && jsonStr[i] <= '9')) {
-      const m = jsonStr.slice(i).match(/^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/)
-      if (m) {
-        tokens.push({ type: 'number', value: m[0] })
-        i += m[0].length
-      } else {
-        tokens.push({ type: 'other', value: jsonStr[i] })
-        i++
-      }
-    } else if (jsonStr.slice(i, i + 4) === 'true') {
-      tokens.push({ type: 'boolean', value: 'true' })
-      i += 4
-    } else if (jsonStr.slice(i, i + 5) === 'false') {
-      tokens.push({ type: 'boolean', value: 'false' })
-      i += 5
-    } else if (jsonStr.slice(i, i + 4) === 'null') {
-      tokens.push({ type: 'null', value: 'null' })
-      i += 4
-    } else {
-      tokens.push({ type: 'other', value: jsonStr[i] })
-      i++
-    }
-  }
-  return tokens
-}
-
-const TOKEN_CLS: Record<Token['type'], string> = {
-  key: 'text-purple-400',
-  string: 'text-green-400',
-  number: 'text-sky-400',
-  boolean: 'text-orange-400',
-  null: 'text-red-400',
-  other: 'text-gray-400',
-}
-
 function JsonViewer({ value, label }: { value: unknown; label: string }) {
-  const jsonStr = JSON.stringify(value, null, 2) ?? 'null'
-  const tokens = tokenize(jsonStr)
+  const { theme } = useTheme()
   return (
     <div className="flex-1 min-w-0 flex flex-col gap-1">
-      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</div>
-      <pre className="bg-gray-950 text-gray-100 p-4 rounded-lg text-xs overflow-auto font-mono max-h-80 leading-relaxed">
-        {tokens.map((tok, i) => (
-          <span key={i} className={TOKEN_CLS[tok.type]}>
-            {tok.value}
-          </span>
-        ))}
-      </pre>
+      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{label}</div>
+      <SyntaxHighlighter
+        language="json"
+        style={theme === 'dark' ? oneDark : oneLight}
+        customStyle={{ borderRadius: 8, maxHeight: 320, fontSize: 12, margin: 0, flexShrink: 0 }}
+      >
+        {JSON.stringify(value, null, 2)}
+      </SyntaxHighlighter>
     </div>
   )
 }
@@ -122,9 +68,9 @@ function ChangeTree({ changes, depth = 0 }: { changes: IChange[]; depth?: number
         if (change.type === 'UPDATE' && change.changes?.length) {
           return (
             <div key={i} style={{ paddingLeft: depth * 16 }}>
-              <div className="flex items-center gap-1.5 py-0.5 text-sm text-gray-500">
+              <div className="flex items-center gap-1.5 py-0.5 text-sm text-gray-500 dark:text-gray-400">
                 <span className="text-yellow-500 font-bold">~</span>
-                <span className="font-mono font-semibold text-gray-700">{change.key}</span>
+                <span className="font-mono font-semibold text-gray-700 dark:text-gray-300">{change.key}</span>
               </div>
               <ChangeTree changes={change.changes} depth={depth + 1} />
             </div>
@@ -138,19 +84,19 @@ function ChangeTree({ changes, depth = 0 }: { changes: IChange[]; depth?: number
             style={{ marginLeft: depth * 16 }}
             className={`flex items-start gap-2 py-1 px-3 rounded text-sm font-mono my-0.5 ${
               isAdd
-                ? 'bg-green-50 text-green-800'
+                ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300'
                 : isRemove
-                  ? 'bg-red-50 text-red-800'
-                  : 'bg-yellow-50 text-yellow-900'
+                  ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300'
+                  : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-900 dark:text-yellow-300'
             }`}
           >
             <span className="font-bold shrink-0 mt-px">{isAdd ? '+' : isRemove ? '-' : '~'}</span>
             <span className="font-semibold shrink-0">{change.key}:</span>
             {change.type === 'UPDATE' && !change.changes?.length && (
               <span className="flex flex-wrap gap-1 items-center">
-                <span className="line-through text-red-500">{JSON.stringify(change.oldValue)}</span>
-                <span className="text-gray-400">→</span>
-                <span className="text-green-700">{JSON.stringify(change.value)}</span>
+                <span className="line-through text-red-500 dark:text-red-400">{JSON.stringify(change.oldValue)}</span>
+                <span className="text-gray-400 dark:text-gray-500">→</span>
+                <span className="text-green-700 dark:text-green-400">{JSON.stringify(change.value)}</span>
               </span>
             )}
             {isAdd && <span>{JSON.stringify(change.value)}</span>}
@@ -214,18 +160,20 @@ function JsonDiff() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">JSON Diff</h1>
-      <p className="text-sm text-gray-500 mb-6">Paste or upload two JSON files. Array order is ignored.</p>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">JSON Diff</h1>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+        Paste or upload two JSON files. Array order is ignored.
+      </p>
 
       <div className="grid grid-cols-2 gap-4 mb-4">
         {sides.map(({ id, label, val, set, ref }) => (
           <div key={id} className="flex flex-col gap-1">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">{label}</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
               <button
                 type="button"
                 onClick={() => ref.current?.click()}
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
               >
                 <Upload size={12} />
                 Upload file
@@ -239,8 +187,8 @@ function JsonDiff() {
               />
             </div>
             <textarea
-              className={`w-full h-52 font-mono text-sm p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                errors[id] ? 'border-red-400 bg-red-50' : 'border-gray-200'
+              className={`w-full h-52 font-mono text-sm p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 ${
+                errors[id] ? 'border-red-400' : 'border-gray-200 dark:border-gray-600'
               }`}
               placeholder={`Paste ${label.toLowerCase()} JSON…`}
               value={val}
@@ -270,29 +218,31 @@ function JsonDiff() {
 
           <div>
             <div className="flex items-center gap-3 mb-3">
-              <h2 className="font-semibold text-gray-800">Differences</h2>
+              <h2 className="font-semibold text-gray-800 dark:text-gray-200">Differences</h2>
               {(() => {
                 const { adds, removes, updates } = countChanges(result.changes)
                 const none = adds === 0 && removes === 0 && updates === 0
                 return (
                   <div className="flex gap-1.5 text-xs">
                     {adds > 0 && (
-                      <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">
+                      <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded-full font-medium">
                         +{adds} added
                       </span>
                     )}
                     {removes > 0 && (
-                      <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-medium">
+                      <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-full font-medium">
                         -{removes} removed
                       </span>
                     )}
                     {updates > 0 && (
-                      <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-medium">
+                      <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded-full font-medium">
                         ~{updates} changed
                       </span>
                     )}
                     {none && (
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">No differences</span>
+                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full">
+                        No differences
+                      </span>
                     )}
                   </div>
                 )
@@ -300,11 +250,11 @@ function JsonDiff() {
             </div>
 
             {result.changes.length === 0 ? (
-              <div className="text-sm text-gray-500 py-8 text-center bg-gray-50 rounded-xl border border-gray-200">
+              <div className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
                 JSONs are identical (order ignored)
               </div>
             ) : (
-              <div className="border border-gray-200 rounded-xl p-3 space-y-0">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 bg-white dark:bg-gray-900">
                 <ChangeTree changes={result.changes} />
               </div>
             )}
