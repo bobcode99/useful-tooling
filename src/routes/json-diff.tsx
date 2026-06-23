@@ -2,9 +2,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { diff } from 'json-diff-ts'
 import type { IChange } from 'json-diff-ts'
 import { useRef, useState } from 'react'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism'
+import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Upload } from 'lucide-react'
 import { useTheme } from '#/context/theme'
 
@@ -105,6 +104,35 @@ function ChangeTree({ changes, depth = 0 }: { changes: IChange[]; depth?: number
         )
       })}
     </>
+  )
+}
+
+function DiffSummary({ changes }: { changes: IChange[] }) {
+  const { adds, removes, updates } = countChanges(changes)
+  const none = adds === 0 && removes === 0 && updates === 0
+  return (
+    <div className="flex gap-1.5 text-xs">
+      {adds > 0 && (
+        <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded-full font-medium">
+          +{adds} added
+        </span>
+      )}
+      {removes > 0 && (
+        <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-full font-medium">
+          -{removes} removed
+        </span>
+      )}
+      {updates > 0 && (
+        <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded-full font-medium">
+          ~{updates} changed
+        </span>
+      )}
+      {none && (
+        <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full">
+          No differences
+        </span>
+      )}
+    </div>
   )
 }
 
@@ -219,34 +247,7 @@ function JsonDiff() {
           <div>
             <div className="flex items-center gap-3 mb-3">
               <h2 className="font-semibold text-gray-800 dark:text-gray-200">Differences</h2>
-              {(() => {
-                const { adds, removes, updates } = countChanges(result.changes)
-                const none = adds === 0 && removes === 0 && updates === 0
-                return (
-                  <div className="flex gap-1.5 text-xs">
-                    {adds > 0 && (
-                      <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded-full font-medium">
-                        +{adds} added
-                      </span>
-                    )}
-                    {removes > 0 && (
-                      <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-full font-medium">
-                        -{removes} removed
-                      </span>
-                    )}
-                    {updates > 0 && (
-                      <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded-full font-medium">
-                        ~{updates} changed
-                      </span>
-                    )}
-                    {none && (
-                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full">
-                        No differences
-                      </span>
-                    )}
-                  </div>
-                )
-              })()}
+              <DiffSummary changes={result.changes} />
             </div>
 
             {result.changes.length === 0 ? (
