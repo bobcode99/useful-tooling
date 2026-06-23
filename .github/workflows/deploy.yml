@@ -34,7 +34,7 @@ jobs:
 
       - name: Generate index.html from SSR server
         run: |
-          node .output/server/index.mjs &
+          bun .output/server/index.mjs &
           sleep 3
           curl -sf http://localhost:3000/useful-tooling/ -o .output/public/index.html
           cp .output/public/index.html .output/public/404.html
