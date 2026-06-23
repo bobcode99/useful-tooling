@@ -14,13 +14,7 @@ const config = defineConfig({
   resolve: { tsconfigPaths: true },
   plugins: [
     devtools(),
-    nitro({
-      ...(process.env.NITRO_PRESET && {
-        preset: process.env.NITRO_PRESET,
-        prerender: { routes: ['/', '/json-diff', '/random'] },
-      }),
-      rollupConfig: { external: [/^@sentry\//] },
-    }),
+    nitro({ rollupConfig: { external: [/^@sentry\//] } }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),

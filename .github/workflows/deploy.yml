@@ -27,20 +27,21 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - name: Build (static prerender)
-        continue-on-error: true
+      - name: Build
         run: bun run build
         env:
-          NITRO_PRESET: static
           VITE_BASE: /useful-tooling/
 
-      - name: Verify static output
+      - name: Generate index.html from SSR server
         run: |
-          test -f .output/public/index.html || (echo "Static build failed to produce index.html" && exit 1)
-          echo "Static files ready"
+          node .output/server/index.mjs &
+          sleep 3
+          curl -sf http://localhost:3000/useful-tooling/ -o .output/public/index.html
+          cp .output/public/index.html .output/public/404.html
+          echo "Files in .output/public:"
           ls .output/public/
-
-      - run: cp .output/public/index.html .output/public/404.html
+        env:
+          NITRO_PORT: 3000
 
       - uses: actions/configure-pages@v4
 
