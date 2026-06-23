@@ -9,8 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RandomRouteImport } from './routes/random'
+import { Route as JsonDiffRouteImport } from './routes/json-diff'
 import { Route as IndexRouteImport } from './routes/index'
 
+const RandomRoute = RandomRouteImport.update({
+  id: '/random',
+  path: '/random',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JsonDiffRoute = JsonDiffRouteImport.update({
+  id: '/json-diff',
+  path: '/json-diff',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +31,50 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/json-diff': typeof JsonDiffRoute
+  '/random': typeof RandomRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/json-diff': typeof JsonDiffRoute
+  '/random': typeof RandomRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/json-diff': typeof JsonDiffRoute
+  '/random': typeof RandomRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/json-diff' | '/random'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/json-diff' | '/random'
+  id: '__root__' | '/' | '/json-diff' | '/random'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  JsonDiffRoute: typeof JsonDiffRoute
+  RandomRoute: typeof RandomRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/random': {
+      id: '/random'
+      path: '/random'
+      fullPath: '/random'
+      preLoaderRoute: typeof RandomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/json-diff': {
+      id: '/json-diff'
+      path: '/json-diff'
+      fullPath: '/json-diff'
+      preLoaderRoute: typeof JsonDiffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,6 +87,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  JsonDiffRoute: JsonDiffRoute,
+  RandomRoute: RandomRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
