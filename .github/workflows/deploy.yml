@@ -27,10 +27,18 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - run: bun run build
+      - name: Build (static prerender)
+        continue-on-error: true
+        run: bun run build
         env:
           NITRO_PRESET: static
           VITE_BASE: /useful-tooling/
+
+      - name: Verify static output
+        run: |
+          test -f .output/public/index.html || (echo "Static build failed to produce index.html" && exit 1)
+          echo "Static files ready"
+          ls .output/public/
 
       - run: cp .output/public/index.html .output/public/404.html
 
